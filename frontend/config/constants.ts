@@ -72,22 +72,47 @@ export const ERC20_TOKENS = {
 } as const
 
 // ============================================
-// COLOR SCHEME
+// COLOR SCHEME - Futuristic Blockchain Theme
 // ============================================
 
 export const COLORS = {
-  primary: "#0F172A", // Deep Navy
-  accent: "#3B82F6", // Bright Blue
-  success: "#10B981", // Emerald Green
-  warning: "#F59E0B", // Amber
-  error: "#EF4444", // Red
-  neutral: "#64748B", // Slate Gray
-  bgLight: "#F8FAFC", // Light background
-  bgDark: "#0F172A", // Dark background
-  textLight: "#FFFFFF",
-  textDark: "#0F172A",
-  border: "#E2E8F0",
-  borderDark: "#1E293B",
+  // Main Colors
+  indigo: "#6366F1",
+  purple: "#8B5CF6",
+  brightPurple: "#A855F7",
+  cyan: "#22D3EE",
+  blue: "#3B82F6",
+  pink: "#EC4899",
+  
+  // Backgrounds
+  bgPrimary: "#030712", // Primary Background
+  bgSecondary: "#0F172A", // Secondary Background
+  bgCard: "#1E293B", // Card/Section Background
+  bgGlass: "rgba(255, 255, 255, 0.05)", // Glass effect
+  bgGlassMedium: "rgba(255, 255, 255, 0.1)",
+  bgGlassStrong: "rgba(255, 255, 255, 0.15)",
+  
+  // Text Colors
+  textHeading: "#FFFFFF", // White for headings
+  textBody: "#D1D5DB", // Light gray for body text
+  textSecondary: "#9CA3AF", // Medium gray for secondary text
+  textMuted: "#6B7280", // Muted text
+  
+  // Gradients
+  gradientMain: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%)", // Indigo → Purple → Pink
+  gradientSecondary: "linear-gradient(135deg, #22D3EE 0%, #3B82F6 100%)", // Cyan → Blue
+  gradientButton: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)", // Indigo → Purple
+  gradientPurple: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)", // Purple gradient
+  
+  // Borders & Effects
+  border: "rgba(255, 255, 255, 0.1)",
+  borderGlow: "rgba(139, 92, 246, 0.5)", // Purple glow
+  
+  // Semantic Colors
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  info: "#22D3EE",
 } as const
 
 // ============================================
@@ -201,13 +226,13 @@ export const PAGINATION = {
 // ============================================
 
 export const PRODUCT_CATEGORIES = [
-  { id: "electronics", label: "Electronics", icon: "📱" },
-  { id: "clothing", label: "Clothing & Fashion", icon: "👕" },
-  { id: "books", label: "Books & Media", icon: "📚" },
-  { id: "art", label: "Art & Design", icon: "🎨" },
-  { id: "collectibles", label: "Collectibles", icon: "🏆" },
-  { id: "services", label: "Services", icon: "🛠️" },
-  { id: "other", label: "Other", icon: "📦" },
+  { id: "electronics", label: "Electronics", icon: "Smartphone" },
+  { id: "clothing", label: "Clothing & Fashion", icon: "Shirt" },
+  { id: "books", label: "Books & Media", icon: "BookOpen" },
+  { id: "art", label: "Art & Design", icon: "Palette" },
+  { id: "collectibles", label: "Collectibles", icon: "Trophy" },
+  { id: "services", label: "Services", icon: "Wrench" },
+  { id: "other", label: "Other", icon: "Package" },
 ] as const
 
 // ============================================

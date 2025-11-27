@@ -6,6 +6,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useWeb3 } from "@/hooks/useWeb3"
 import { useRouter } from "next/navigation"
+import { Package, DollarSign, Star } from "lucide-react"
 
 export default function BecomeSeller() {
   const { isConnected, account } = useWeb3()
@@ -74,17 +75,23 @@ export default function BecomeSeller() {
 
           <div className="grid md:grid-cols-3 gap-4 mb-12">
             <div className="text-center">
-              <div className="text-3xl mb-2">📦</div>
+              <div className="flex justify-center mb-2">
+                <Package className="w-12 h-12 text-accent" />
+              </div>
               <p className="font-medium">List Products</p>
               <p className="text-sm text-muted-foreground">Create unlimited listings</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl mb-2">💰</div>
+              <div className="flex justify-center mb-2">
+                <DollarSign className="w-12 h-12 text-accent" />
+              </div>
               <p className="font-medium">Earn Revenue</p>
               <p className="text-sm text-muted-foreground">Instant payouts to wallet</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl mb-2">⭐</div>
+              <div className="flex justify-center mb-2">
+                <Star className="w-12 h-12 text-accent" />
+              </div>
               <p className="font-medium">Build Reputation</p>
               <p className="text-sm text-muted-foreground">Earn seller badges</p>
             </div>
