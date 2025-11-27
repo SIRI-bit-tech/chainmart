@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'apps.sellers',
     'apps.orders',
     'apps.reviews',
-    'apps.messages',
+    'apps.messages.apps.MessagesConfig',  # Use full path to avoid conflict
     'apps.blockchain',
     'apps.realtime',
 ]
@@ -73,18 +73,21 @@ TEMPLATES = [
 ]
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'chainmart'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-        'ATOMIC_REQUESTS': True,
-        'CONN_MAX_AGE': 600,
+import dj_database_url
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+    DATABASES['default']['ATOMIC_REQUESTS'] = True
+else:
+    raise ValueError("DATABASE_URL environment variable is not set. Please set it in your .env file.")
 
 # Cache Configuration
 CACHES = {
@@ -129,6 +132,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model
+AUTH_USER_MODEL = 'users.UserProfile'
 
 # REST Framework
 REST_FRAMEWORK = {

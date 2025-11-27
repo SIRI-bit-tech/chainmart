@@ -33,6 +33,22 @@ class UserProfile(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Fix reverse accessor clashes
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name='groups',
+        blank=True,
+        related_name='userprofile_set',
+        related_query_name='userprofile',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name='user permissions',
+        blank=True,
+        related_name='userprofile_set',
+        related_query_name='userprofile',
+    )
+    
     class Meta:
         db_table = 'users_userprofile'
         indexes = [
