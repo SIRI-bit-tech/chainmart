@@ -1,0 +1,19 @@
+{
+  "name": "chainmart-contracts",
+  "version": "1.0.0",
+  "description": "ChainMart - Web3 Marketplace Smart Contracts",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy.js --network amoy",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "verify:amoy": "hardhat verify --network amoy",
+    "verify:polygon": "hardhat verify --network polygon"
+  },
+  "devDependencies": {
+    "@hardhat/ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^5.0.0",
+    "hardhat": "^2.19.0",
+    "dotenv": "^16.3.1"
+  }
+}

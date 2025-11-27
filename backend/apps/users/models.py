@@ -1,0 +1,86 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import URLValidator
+from django_extensions.db.models import TimeStampedModel
+
+class UserProfile(AbstractUser):
+    """Extended user model with Web3 integration"""
+    
+    ROLE_CHOICES = (
+        ('buyer', 'Buyer'),
+        ('seller', 'Seller'),
+        ('admin', 'Admin'),
+    )
+    
+    wallet_address = models.CharField(
+        max_length=42,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Ethereum wallet address'
+    )
+    display_name = models.CharField(max_length=255, blank=True)
+    avatar = models.URLField(blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='buyer')
+    email_verified = models.BooleanField(default=False)
+    wallet_verified = models.BooleanField(default=False)
+    reputation_score = models.IntegerField(default=0)
+    total_transactions = models.IntegerField(default=0)
+    is_suspended = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'users_userprofile'
+        indexes = [
+            models.Index(fields=['wallet_address']),
+            models.Index(fields=['email']),
+            models.Index(fields=['reputation_score']),
+        ]
+    
+    def __str__(self):
+        return f"{self.display_name or self.username} ({self.wallet_address})"
+    
+    @property
+    def is_seller(self):
+        return self.role == 'seller' or hasattr(self, 'seller_profile')
+    
+    @property
+    def is_buyer(self):
+        return self.role in ('buyer', 'seller')
+
+
+class WalletSignature(TimeStampedModel):
+    """Stores wallet verification signatures"""
+    
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='wallet_signature')
+    wallet_address = models.CharField(max_length=42, db_index=True)
+    message = models.TextField()
+    signature = models.TextField()
+    verified_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        db_table = 'users_walletsignature'
+
+
+class UserNotificationPreference(TimeStampedModel):
+    """User notification preferences"""
+    
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='notification_preferences')
+    email_orders = models.BooleanField(default=True)
+    email_messages = models.BooleanField(default=True)
+    email_disputes = models.BooleanField(default=True)
+    push_orders = models.BooleanField(default=True)
+    push_messages = models.BooleanField(default=True)
+    digest_frequency = models.CharField(
+        max_length=20,
+        choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('never', 'Never')],
+        default='daily'
+    )
+    
+    class Meta:
+        db_table = 'users_notificationpreference'
