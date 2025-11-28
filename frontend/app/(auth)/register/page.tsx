@@ -123,13 +123,13 @@ export default function RegisterPage() {
           <div className="mt-8 text-center">
             <p className="text-muted-foreground mb-4">
               Already have an account?{" "}
-              <Link href="/auth/login" className="text-accent hover:underline">
+              <Link href="/login" className="text-accent hover:underline">
                 Sign in
               </Link>
             </p>
             <p className="text-muted-foreground">
               Or{" "}
-              <Link href="/auth/connect-wallet" className="text-accent hover:underline">
+              <Link href="/connect-wallet" className="text-accent hover:underline">
                 connect wallet instead
               </Link>
             </p>

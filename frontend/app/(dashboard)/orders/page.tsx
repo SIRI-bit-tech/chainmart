@@ -48,7 +48,7 @@ export default function OrdersPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="card p-8 text-center max-w-md">
           <p className="text-muted-foreground mb-4">Please connect your wallet to view orders</p>
-          <Link href="/auth/connect-wallet" className="btn-primary">
+          <Link href="/connect-wallet" className="btn-primary">
             Connect Wallet
           </Link>
         </div>
@@ -101,7 +101,7 @@ export default function OrdersPage() {
             {orders.map((order) => (
               <Link
                 key={order.id}
-                href={`/dashboard/orders/${order.id}`}
+                href={`/orders/${order.id}`}
                 className="card p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-center justify-between">

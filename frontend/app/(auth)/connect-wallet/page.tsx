@@ -122,7 +122,7 @@ export default function ConnectWalletPage() {
           </div>
 
           <div className="mt-4 text-center">
-            <Link href="/auth/register" className="text-accent hover:underline text-sm">
+            <Link href="/register" className="text-accent hover:underline text-sm">
               Or register with email instead
             </Link>
           </div>

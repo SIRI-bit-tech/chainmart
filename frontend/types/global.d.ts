@@ -317,9 +317,13 @@ export interface DashboardMetrics {
   totalSales: number
   totalRevenue: string
   totalOrders: number
+  totalSpent: number
   pendingOrders: number
   disputes: number
   averageRating: number
+  reviewsGiven: number
+  activeListings: number
+  sellerRating: number
 }
 
 export interface SalesData {

@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils"
 import type { UserProfile, DashboardMetrics } from "@/types/global"
 
 export default function DashboardPage() {
-  const { account, isConnected, balance } = useWeb3()
+  const { account, isConnected } = useWeb3()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -47,7 +47,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="card p-8 text-center max-w-md">
           <p className="text-muted-foreground mb-4">Please connect your wallet to access your dashboard</p>
-          <Link href="/auth/connect-wallet" className="btn-primary">
+          <Link href="/connect-wallet" className="btn-primary">
             Connect Wallet
           </Link>
         </div>
@@ -142,16 +142,16 @@ export default function DashboardPage() {
               <Link href="/products" className="btn-primary py-3 text-center">
                 Browse Products
               </Link>
-              <Link href="/dashboard/orders" className="btn-secondary py-3 text-center">
+              <Link href="/orders" className="btn-secondary py-3 text-center">
                 View My Orders
               </Link>
             </>
           ) : (
             <>
-              <Link href="/dashboard/seller/products/new" className="btn-primary py-3 text-center">
+              <Link href="/seller/products/new" className="btn-primary py-3 text-center">
                 List New Product
               </Link>
-              <Link href="/dashboard/seller/products" className="btn-secondary py-3 text-center">
+              <Link href="/seller/products" className="btn-secondary py-3 text-center">
                 Manage Listings
               </Link>
             </>

@@ -38,7 +38,7 @@ export default function ProductDetailPage() {
 
   const handlePurchase = async () => {
     if (!isConnected || !account) {
-      router.push("/auth/connect-wallet")
+      router.push("/connect-wallet")
       return
     }
 
@@ -199,7 +199,7 @@ export default function ProductDetailPage() {
               </button>
 
               {!isConnected && (
-                <Link href="/auth/connect-wallet" className="w-full btn-secondary py-3 block text-center">
+                <Link href="/connect-wallet" className="w-full btn-secondary py-3 block text-center">
                   Connect Wallet to Purchase
                 </Link>
               )}

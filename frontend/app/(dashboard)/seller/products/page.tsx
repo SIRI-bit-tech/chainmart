@@ -36,7 +36,7 @@ export default function SellerProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">My Products</h1>
-        <Link href="/dashboard/seller/products/new" className="btn-primary">
+        <Link href="/seller/products/new" className="btn-primary">
           + List New Product
         </Link>
       </div>
@@ -56,7 +56,7 @@ export default function SellerProductsPage() {
           <div className="text-6xl mb-4">📦</div>
           <h2 className="text-2xl font-bold mb-4">No products listed yet</h2>
           <p className="text-muted-foreground mb-6">Start selling by listing your first product</p>
-          <Link href="/dashboard/seller/products/new" className="btn-primary">
+          <Link href="/seller/products/new" className="btn-primary">
             List Your First Product
           </Link>
         </div>
@@ -87,7 +87,7 @@ export default function SellerProductsPage() {
               </div>
 
               <div className="flex gap-2">
-                <Link href={`/dashboard/seller/products/${product.id}/edit`} className="btn-secondary py-2 px-4">
+                <Link href={`/seller/products/${product.id}/edit`} className="btn-secondary py-2 px-4">
                   Edit
                 </Link>
                 <button className="btn-secondary py-2 px-4">Delete</button>

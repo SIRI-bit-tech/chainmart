@@ -56,7 +56,7 @@ export default function BecomeSeller() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="card p-8 text-center max-w-md">
           <p className="text-muted-foreground mb-4">Please connect your wallet to become a seller</p>
-          <Link href="/auth/connect-wallet" className="btn-primary">
+          <Link href="/connect-wallet" className="btn-primary">
             Connect Wallet
           </Link>
         </div>
@@ -131,7 +131,7 @@ export default function BecomeSeller() {
               <button type="submit" disabled={isLoading} className="btn-primary py-3 px-8 flex-1">
                 {isLoading ? "Activating..." : "Activate Seller Account"}
               </button>
-              <Link href="/dashboard" className="btn-secondary py-3 px-8">
+              <Link href="/profile" className="btn-secondary py-3 px-8">
                 Back to Dashboard
               </Link>
             </div>

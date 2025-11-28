@@ -73,7 +73,7 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     if (!isConnected || !account || !cart) {
-      router.push("/auth/connect-wallet")
+      router.push("/connect-wallet")
       return
     }
 
@@ -240,7 +240,7 @@ export default function CartPage() {
               </button>
 
               {!isConnected && (
-                <Link href="/auth/connect-wallet" className="w-full btn-secondary py-3 block text-center">
+                <Link href="/connect-wallet" className="w-full btn-secondary py-3 block text-center">
                   Connect Wallet
                 </Link>
               )}

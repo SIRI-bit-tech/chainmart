@@ -19,7 +19,7 @@ export default function About() {
             <Link href="/browse" className="text-muted-foreground hover:text-foreground">
               Browse
             </Link>
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
+            <Link href="/profile" className="text-muted-foreground hover:text-foreground">
               Dashboard
             </Link>
           </div>
@@ -90,7 +90,7 @@ export default function About() {
             <p className="text-muted-foreground mb-4">Ready to buy or sell? Start your ChainMart journey today.</p>
             <div className="space-x-4">
               <Link
-                href="/auth/connect-wallet"
+                href="/connect-wallet"
                 className="inline-block px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
               >
                 Connect Wallet

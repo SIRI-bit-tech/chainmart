@@ -20,7 +20,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isConnected) {
-      router.push("/auth/connect-wallet")
+      router.push("/connect-wallet")
       return
     }
 
@@ -57,18 +57,18 @@ export default function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-foreground hover:text-accent transition-colors">
+            <Link href="/profile" className="text-foreground hover:text-accent transition-colors">
               Dashboard
             </Link>
-            <Link href="/dashboard/orders" className="text-foreground hover:text-accent transition-colors">
+            <Link href="/orders" className="text-foreground hover:text-accent transition-colors">
               Orders
             </Link>
             {isSeller && (
-              <Link href="/dashboard/seller/products" className="text-foreground hover:text-accent transition-colors">
+              <Link href="/seller/products" className="text-foreground hover:text-accent transition-colors">
                 My Store
               </Link>
             )}
-            <Link href="/dashboard/profile" className="text-foreground hover:text-accent transition-colors">
+            <Link href="/profile" className="text-foreground hover:text-accent transition-colors">
               Profile
             </Link>
             <div className="text-sm text-muted-foreground">
@@ -89,13 +89,13 @@ export default function DashboardLayout({
                 <div>
                   <p className="text-xs uppercase text-muted-foreground font-semibold px-4 py-2">Buyer</p>
                   <Link
-                    href="/dashboard"
+                    href="/profile"
                     className="block px-4 py-2 rounded hover:bg-muted-background transition-colors"
                   >
                     Overview
                   </Link>
                   <Link
-                    href="/dashboard/orders"
+                    href="/orders"
                     className="block px-4 py-2 rounded hover:bg-muted-background transition-colors"
                   >
                     My Orders
@@ -113,13 +113,13 @@ export default function DashboardLayout({
                   <div>
                     <p className="text-xs uppercase text-muted-foreground font-semibold px-4 py-2 mt-4">Seller</p>
                     <Link
-                      href="/dashboard/seller/products"
+                      href="/seller/products"
                       className="block px-4 py-2 rounded hover:bg-muted-background transition-colors"
                     >
                       My Products
                     </Link>
                     <Link
-                      href="/dashboard/seller/products/new"
+                      href="/seller/products/new"
                       className="block px-4 py-2 rounded hover:bg-muted-background transition-colors"
                     >
                       List Product
@@ -143,7 +143,7 @@ export default function DashboardLayout({
                 <div>
                   <p className="text-xs uppercase text-muted-foreground font-semibold px-4 py-2 mt-4">Account</p>
                   <Link
-                    href="/dashboard/profile"
+                    href="/profile"
                     className="block px-4 py-2 rounded hover:bg-muted-background transition-colors"
                   >
                     Profile Settings

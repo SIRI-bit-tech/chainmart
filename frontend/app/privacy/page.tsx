@@ -18,7 +18,7 @@ export default function Privacy() {
             <Link href="/browse" className="text-muted-foreground hover:text-foreground">
               Browse
             </Link>
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
+            <Link href="/profile" className="text-muted-foreground hover:text-foreground">
               Dashboard
             </Link>
           </div>

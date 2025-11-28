@@ -110,7 +110,7 @@ export default function Home() {
             <Link href="/browse" className="text-body hover:text-white transition-colors">
               Marketplace
             </Link>
-            <Link href="/auth/connect-wallet" className="btn-primary">
+            <Link href="/connect-wallet" className="btn-primary">
               Connect Wallet
             </Link>
           </div>
@@ -136,7 +136,7 @@ export default function Home() {
                 <Link href="/browse" className="btn-primary px-10 py-4 text-lg">
                   Browse Products
                 </Link>
-                <Link href="/auth/register" className="btn-secondary px-10 py-4 text-lg">
+                <Link href="/register" className="btn-secondary px-10 py-4 text-lg">
                   Get Started
                 </Link>
               </div>
@@ -283,7 +283,7 @@ export default function Home() {
               Join thousands of buyers and sellers on the most secure decentralized marketplace
             </p>
             <Link
-              href="/auth/connect-wallet"
+              href="/connect-wallet"
               className="btn-primary px-12 py-5 text-xl font-semibold inline-block glow-purple"
             >
               Start Trading Now

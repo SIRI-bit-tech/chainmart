@@ -94,13 +94,13 @@ export default function LoginPage() {
           <div className="mt-8 text-center space-y-4">
             <p className="text-muted-foreground">
               Don't have an account?{" "}
-              <Link href="/auth/register" className="text-accent hover:underline">
+              <Link href="/register" className="text-accent hover:underline">
                 Create one
               </Link>
             </p>
             <p className="text-muted-foreground">
               Or{" "}
-              <Link href="/auth/connect-wallet" className="text-accent hover:underline">
+              <Link href="/connect-wallet" className="text-accent hover:underline">
                 connect wallet
               </Link>
             </p>

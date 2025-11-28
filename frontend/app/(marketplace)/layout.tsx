@@ -29,7 +29,7 @@ export default function MarketplaceLayout({
             <Link href="/sellers" className="text-foreground hover:text-accent transition-colors">
               Sellers
             </Link>
-            <Link href="/dashboard" className="text-foreground hover:text-accent transition-colors">
+            <Link href="/profile" className="text-foreground hover:text-accent transition-colors">
               Dashboard
             </Link>
 
@@ -38,7 +38,7 @@ export default function MarketplaceLayout({
                 <div className="text-sm">
                   <p className="font-mono text-accent">{formatAddress(account)}</p>
                 </div>
-                <Link href="/dashboard/profile" className="btn-secondary py-2 px-4">
+                <Link href="/profile" className="btn-secondary py-2 px-4">
                   Profile
                 </Link>
               </div>
