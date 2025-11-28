@@ -1,30 +1,52 @@
 import { BrowserProvider, Contract, ethers } from "ethers"
-import type { EthereumProvider, EthereumRequest } from "@/types/global"
+import type { EthereumProvider } from "@/types/global"
 import { ACTIVE_NETWORK } from "@/config/constants"
 
 /**
  * Web3 utilities and provider management
  * Production-ready Ethereum/Polygon integration
+ * Works with both MetaMask and WalletConnect through Wagmi
  */
+
+export type WalletType = "injected" | "walletconnect" | null
 
 class Web3Service {
   private provider: BrowserProvider | null = null
   private signer: ethers.Signer | null = null
   private currentAccount: string | null = null
+  private walletType: WalletType = null
 
   /**
-   * Initialize Web3 provider
+   * Initialize Web3 provider from Wagmi wallet client
+   */
+  async initFromWalletClient(walletClient: any): Promise<BrowserProvider | null> {
+    if (!walletClient) return null
+
+    try {
+      this.provider = new BrowserProvider(walletClient as any)
+      this.currentAccount = walletClient.account?.address || null
+      this.walletType = walletClient.connector?.id === "walletConnect" ? "walletconnect" : "injected"
+      return this.provider
+    } catch (error) {
+      console.error("Failed to initialize from wallet client:", error)
+      return null
+    }
+  }
+
+  /**
+   * Initialize Web3 provider (fallback for direct MetaMask)
    */
   async init(): Promise<BrowserProvider | null> {
     if (typeof window === "undefined") return null
 
     const ethereum = window.ethereum as EthereumProvider | undefined
     if (!ethereum) {
-      console.error("MetaMask not found")
+      console.log("No wallet detected. Please use the Connect Wallet button.")
       return null
     }
 
     this.provider = new BrowserProvider(ethereum)
+    this.walletType = "injected"
 
     // Listen for account changes
     ethereum.on("accountsChanged", (accounts: unknown) => {
@@ -42,53 +64,17 @@ class Web3Service {
   }
 
   /**
-   * Connect wallet
+   * Set current account (called from useWeb3 hook)
    */
-  async connectWallet(): Promise<string | null> {
-    try {
-      const ethereum = window.ethereum as EthereumProvider | undefined
-      if (!ethereum) throw new Error("MetaMask not found")
-
-      const accounts = (await ethereum.request({
-        method: "eth_requestAccounts",
-      } as EthereumRequest)) as string[]
-
-      this.currentAccount = accounts[0]
-      await this.checkNetwork()
-
-      return this.currentAccount
-    } catch (error) {
-      console.error("Failed to connect wallet:", error)
-      throw error
-    }
+  setAccount(account: string | null): void {
+    this.currentAccount = account
   }
 
   /**
    * Get current account
    */
-  async getAccount(): Promise<string | null> {
-    if (!this.provider) {
-      await this.init()
-    }
-
-    if (this.currentAccount) {
-      return this.currentAccount
-    }
-
-    try {
-      const ethereum = window.ethereum as EthereumProvider | undefined
-      if (!ethereum) return null
-
-      const accounts = (await ethereum.request({
-        method: "eth_accounts",
-      } as EthereumRequest)) as string[]
-
-      this.currentAccount = accounts[0] || null
-      return this.currentAccount
-    } catch (error) {
-      console.error("Failed to get account:", error)
-      return null
-    }
+  getAccount(): string | null {
+    return this.currentAccount
   }
 
   /**
@@ -103,10 +89,8 @@ class Web3Service {
    */
   async getSigner(): Promise<ethers.Signer | null> {
     if (!this.provider) {
-      await this.init()
+      return null
     }
-
-    if (!this.provider) return null
 
     try {
       this.signer = await this.provider.getSigner()
@@ -115,6 +99,13 @@ class Web3Service {
       console.error("Failed to get signer:", error)
       return null
     }
+  }
+
+  /**
+   * Get wallet type
+   */
+  getWalletType(): WalletType {
+    return this.walletType
   }
 
   /**
@@ -156,6 +147,8 @@ class Web3Service {
    */
   async switchNetwork(): Promise<boolean> {
     try {
+      if (typeof window === "undefined") return false
+      
       const ethereum = window.ethereum as EthereumProvider | undefined
       if (!ethereum) return false
 
@@ -165,14 +158,12 @@ class Web3Service {
         await ethereum.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: chainIdHex }],
-        } as EthereumRequest)
+        })
 
         return true
-      } catch (switchError: unknown) {
-        const error = switchError as { code?: number }
-
+      } catch (switchError: any) {
         // Network not added to wallet
-        if (error.code === 4902) {
+        if (switchError.code === 4902) {
           await ethereum.request({
             method: "wallet_addEthereumChain",
             params: [
@@ -184,7 +175,7 @@ class Web3Service {
                 nativeCurrency: ACTIVE_NETWORK.nativeCurrency,
               },
             ],
-          } as EthereumRequest)
+          })
 
           return true
         }
@@ -233,17 +224,14 @@ class Web3Service {
    * Get contract instance
    */
   getContract(contractAddress: string, contractABI: ethers.InterfaceAbi, withSigner = true): Contract {
-    let provider: BrowserProvider | ethers.JsonRpcProvider
-
     if (withSigner && this.signer) {
-      provider = this.signer
+      return new Contract(contractAddress, contractABI, this.signer)
     } else if (this.provider) {
-      provider = this.provider
+      return new Contract(contractAddress, contractABI, this.provider)
     } else {
-      provider = new ethers.JsonRpcProvider(ACTIVE_NETWORK.rpcUrl)
+      const provider = new ethers.JsonRpcProvider(ACTIVE_NETWORK.rpcUrl)
+      return new Contract(contractAddress, contractABI, provider)
     }
-
-    return new Contract(contractAddress, contractABI, provider)
   }
 
   /**
@@ -296,6 +284,7 @@ class Web3Service {
     this.provider = null
     this.signer = null
     this.currentAccount = null
+    this.walletType = null
   }
 }
 
