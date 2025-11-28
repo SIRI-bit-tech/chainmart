@@ -33,7 +33,7 @@ contract ReputationNFT is ERC721, Ownable {
     event ReputationUpdated(address indexed user, uint256 newScore, ReputationLevel level);
     event BadgeMinted(address indexed user, ReputationLevel level, uint256 tokenId);
     
-    constructor() ERC721("ChainMart Reputation", "CMREP") {}
+    constructor() ERC721("ChainMart Reputation", "CMREP") Ownable(msg.sender) {}
     
     /**
      * @dev Updates user reputation score

@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 interface IReputationNFT {
     function updateReputation(address user, uint256 newScore) external;
@@ -122,7 +122,7 @@ contract MarketplaceEscrow is ReentrancyGuard, Ownable, Pausable {
         _;
     }
     
-    constructor(address _platformWallet, address _reputationNFT) {
+    constructor(address _platformWallet, address _reputationNFT) Ownable(msg.sender) {
         platformWallet = _platformWallet;
         reputationNFT = IReputationNFT(_reputationNFT);
         listingCounter = 1;
