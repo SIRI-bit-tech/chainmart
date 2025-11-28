@@ -11,9 +11,11 @@
     "verify:polygon": "hardhat verify --network polygon"
   },
   "devDependencies": {
-    "@hardhat/ethers": "^2.2.3",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@openzeppelin/contracts": "^5.0.0",
     "hardhat": "^2.19.0",
+    "ethers": "^6.9.0",
     "dotenv": "^16.3.1"
   }
 }
