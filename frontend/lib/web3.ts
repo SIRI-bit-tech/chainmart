@@ -19,13 +19,13 @@ class Web3Service {
   /**
    * Initialize Web3 provider from Wagmi wallet client
    */
-  async initFromWalletClient(walletClient: any): Promise<BrowserProvider | null> {
+  async initFromWalletClient(walletClient: any, connectorId?: string): Promise<BrowserProvider | null> {
     if (!walletClient) return null
 
     try {
       this.provider = new BrowserProvider(walletClient as any)
       this.currentAccount = walletClient.account?.address || null
-      this.walletType = walletClient.connector?.id === "walletConnect" ? "walletconnect" : "injected"
+      this.walletType = connectorId === "walletConnect" ? "walletconnect" : "injected"
       return this.provider
     } catch (error) {
       console.error("Failed to initialize from wallet client:", error)

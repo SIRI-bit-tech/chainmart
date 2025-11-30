@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAccount, useWalletClient } from "wagmi"
+import { useAppKit } from "@reown/appkit/react"
 import { web3Service } from "@/lib/web3"
 import { formatAddress } from "@/lib/utils"
-import { WalletModal } from "@/components/wallet-modal"
 import Link from "next/link"
 
 export default function ConnectWalletPage() {
   const router = useRouter()
-  const { address, isConnected: wagmiConnected } = useAccount()
+  const { address, isConnected: wagmiConnected, connector } = useAccount()
   const { data: walletClient } = useWalletClient()
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { open } = useAppKit()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,9 +20,9 @@ export default function ConnectWalletPage() {
   useEffect(() => {
     if (wagmiConnected && address && walletClient) {
       web3Service.setAccount(address)
-      web3Service.initFromWalletClient(walletClient)
+      web3Service.initFromWalletClient(walletClient, connector?.id)
     }
-  }, [wagmiConnected, address, walletClient])
+  }, [wagmiConnected, address, walletClient, connector])
 
   const handleVerify = async () => {
     if (!address || !walletClient) {
@@ -35,29 +35,49 @@ export default function ConnectWalletPage() {
       setError(null)
 
       // Ensure web3Service is initialized
-      await web3Service.initFromWalletClient(walletClient)
+      await web3Service.initFromWalletClient(walletClient, connector?.id)
 
-      // Get wallet signature for verification
-      const message = `Sign this message to verify your wallet ownership on ChainMart. Timestamp: ${Date.now()}`
+      // Step 1: Request nonce from backend
+      const nonceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/request-nonce/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: address,
+        }),
+      })
+
+      if (!nonceResponse.ok) {
+        const errBody = await nonceResponse.json()
+        setError(errBody.error || "Failed to request nonce")
+        return
+      }
+
+      const { nonce, message } = await nonceResponse.json()
+
+      // Step 2: Sign the message with nonce
       const signature = await web3Service.signMessage(message)
 
-      // Send verification to backend
-      const response = await fetch("/api/auth/verify-wallet", {
+      // Step 3: Send verification to backend
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-wallet/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           wallet_address: address,
           message,
           signature,
+          nonce,
         }),
       })
 
-      if (response.ok) {
+      if (verifyResponse.ok) {
+        const data = await verifyResponse.json()
+        // Store token (you might want to use a proper auth context)
+        localStorage.setItem('auth_token', data.token)
         // Redirect to marketplace after successful verification
         router.push("/products")
       } else {
-        const error = await response.json()
-        setError(error.error || "Verification failed")
+        const errBody = await verifyResponse.json()
+        setError(errBody.error || "Verification failed")
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Verification failed"
@@ -98,19 +118,11 @@ export default function ConnectWalletPage() {
                 </ul>
               </div>
 
-              <button onClick={() => setIsModalOpen(true)} disabled={isLoading} className="w-full btn-primary py-3">
+              <button onClick={() => open()} disabled={isLoading} className="w-full btn-primary py-3">
                 Connect Wallet
               </button>
             </div>
           )}
-
-          <WalletModal 
-            isOpen={isModalOpen} 
-            onClose={() => setIsModalOpen(false)}
-            onConnect={() => {
-              setIsModalOpen(false)
-            }}
-          />
 
           {error && (
             <div className="mt-6 bg-error/10 border border-error rounded-lg p-4">
