@@ -2,63 +2,65 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAccount, useWalletClient } from "wagmi"
 import { web3Service } from "@/lib/web3"
 import { formatAddress } from "@/lib/utils"
+import { WalletModal } from "@/components/wallet-modal"
 import Link from "next/link"
 
 export default function ConnectWalletPage() {
   const router = useRouter()
-  const [account, setAccount] = useState<string | null>(null)
+  const { address, isConnected: wagmiConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
 
+  // Initialize web3Service when wallet connects
   useEffect(() => {
-    const checkConnection = async () => {
-      const currentAccount = await web3Service.getAccount()
-      if (currentAccount) {
-        setAccount(currentAccount)
-        setIsConnected(true)
-      }
+    if (wagmiConnected && address && walletClient) {
+      web3Service.setAccount(address)
+      web3Service.initFromWalletClient(walletClient)
     }
-    checkConnection()
-  }, [])
+  }, [wagmiConnected, address, walletClient])
 
-  const handleConnect = async () => {
+  const handleVerify = async () => {
+    if (!address || !walletClient) {
+      setError("Wallet not properly connected. Please try again.")
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
 
-      const connectedAccount = await web3Service.connectWallet()
-      if (connectedAccount) {
-        setAccount(connectedAccount)
-        setIsConnected(true)
+      // Ensure web3Service is initialized
+      await web3Service.initFromWalletClient(walletClient)
 
-        // Get wallet signature for verification
-        const message = `Sign this message to verify your wallet ownership on ChainMart. Timestamp: ${Date.now()}`
-        const signature = await web3Service.signMessage(message)
+      // Get wallet signature for verification
+      const message = `Sign this message to verify your wallet ownership on ChainMart. Timestamp: ${Date.now()}`
+      const signature = await web3Service.signMessage(message)
 
-        // Send verification to backend
-        const response = await fetch("/api/auth/verify-wallet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet_address: connectedAccount,
-            message,
-            signature,
-          }),
-        })
+      // Send verification to backend
+      const response = await fetch("/api/auth/verify-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: address,
+          message,
+          signature,
+        }),
+      })
 
-        if (response.ok) {
-          // Redirect to marketplace after successful verification
-          router.push("/products")
-        } else {
-          const error = await response.json()
-          setError(error.error || "Verification failed")
-        }
+      if (response.ok) {
+        // Redirect to marketplace after successful verification
+        router.push("/products")
+      } else {
+        const error = await response.json()
+        setError(error.error || "Verification failed")
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Connection failed"
+      const errorMessage = err instanceof Error ? err.message : "Verification failed"
       setError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -72,14 +74,14 @@ export default function ConnectWalletPage() {
           <h1 className="text-3xl font-bold text-center mb-2">ChainMart</h1>
           <p className="text-center text-muted-foreground mb-8">Connect your wallet to start trading</p>
 
-          {isConnected && account ? (
+          {wagmiConnected && address ? (
             <div className="space-y-6">
               <div className="bg-success/10 border border-success rounded-lg p-4 text-center">
                 <p className="text-sm text-success font-medium mb-2">Wallet Connected</p>
-                <p className="text-lg font-mono font-semibold text-foreground">{formatAddress(account, 10)}</p>
+                <p className="text-lg font-mono font-semibold text-foreground">{formatAddress(address, 10)}</p>
               </div>
 
-              <button onClick={handleConnect} disabled={isLoading} className="w-full btn-primary py-3">
+              <button onClick={handleVerify} disabled={isLoading} className="w-full btn-primary py-3">
                 {isLoading ? "Verifying..." : "Verify & Continue"}
               </button>
             </div>
@@ -88,18 +90,27 @@ export default function ConnectWalletPage() {
               <div className="bg-muted-background rounded-lg p-4">
                 <h3 className="font-semibold mb-2">Supported Wallets</h3>
                 <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>✓ MetaMask</li>
+                  <li>✓ MetaMask (Desktop)</li>
+                  <li>✓ WalletConnect (Mobile)</li>
                   <li>✓ Trust Wallet</li>
                   <li>✓ Coinbase Wallet</li>
-                  <li>✓ Any EIP-1193 compatible wallet</li>
+                  <li>✓ 100+ other wallets</li>
                 </ul>
               </div>
 
-              <button onClick={handleConnect} disabled={isLoading} className="w-full btn-primary py-3">
-                {isLoading ? "Connecting..." : "Connect Wallet"}
+              <button onClick={() => setIsModalOpen(true)} disabled={isLoading} className="w-full btn-primary py-3">
+                Connect Wallet
               </button>
             </div>
           )}
+
+          <WalletModal 
+            isOpen={isModalOpen} 
+            onClose={() => setIsModalOpen(false)}
+            onConnect={() => {
+              setIsModalOpen(false)
+            }}
+          />
 
           {error && (
             <div className="mt-6 bg-error/10 border border-error rounded-lg p-4">
