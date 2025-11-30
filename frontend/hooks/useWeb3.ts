@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { useAccount, useWalletClient, useDisconnect } from "wagmi"
+import { useAppKit } from "@reown/appkit/react"
 import { web3Service } from "@/lib/web3"
 
 export function useWeb3() {
   const { address, isConnected, connector } = useAccount()
   const { data: walletClient } = useWalletClient()
   const { disconnect: wagmiDisconnect } = useDisconnect()
+  const { open } = useAppKit()
   
   const [balance, setBalance] = useState<string>("0")
   const [chainId, setChainId] = useState<number | null>(null)
@@ -30,7 +32,7 @@ export function useWeb3() {
 
         // Initialize provider from wallet client
         if (walletClient) {
-          await web3Service.initFromWalletClient(walletClient)
+          await web3Service.initFromWalletClient(walletClient, connector?.id)
         }
 
         // Get balance
@@ -47,12 +49,11 @@ export function useWeb3() {
     }
 
     initWeb3()
-  }, [isConnected, address, walletClient])
+  }, [isConnected, address, walletClient, connector])
 
   const connect = async () => {
-    // Connection is handled by WalletModal component
-    // This function is kept for compatibility
-    setError("Please use the Connect Wallet button")
+    // Open Reown AppKit modal for wallet connection
+    open()
   }
 
   const disconnect = () => {

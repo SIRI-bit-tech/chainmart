@@ -1,46 +1,43 @@
-import { createConfig, http } from "wagmi"
-import { polygon, polygonAmoy } from "wagmi/chains"
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors"
+import { createAppKit } from "@reown/appkit/react"
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
+import { polygon, polygonAmoy } from "@reown/appkit/networks"
+import { QueryClient } from "@tanstack/react-query"
 
-// WalletConnect Project ID - Get from https://cloud.walletconnect.com/
+// WalletConnect Project ID - Get from https://cloud.reown.com/
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID"
 
 // Define chains
-const chains = [polygonAmoy, polygon] as const
+export const networks = [polygonAmoy, polygon] as const
 
-// Create wagmi config with multiple wallet options
-export const wagmiConfig = createConfig({
-  chains,
-  connectors: [
-    // Injected wallets (MetaMask, Brave, etc.)
-    injected({
-      shimDisconnect: true,
-    }),
-    // WalletConnect - supports 100+ wallets
-    walletConnect({
-      projectId,
-      metadata: {
-        name: "ChainMart",
-        description: "Decentralized Web3 Marketplace on Polygon",
-        url: typeof window !== "undefined" ? window.location.origin : "https://chainmart.com",
-        icons: [typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "https://chainmart.com/logo.png"],
-      },
-      showQrModal: true,
-      qrModalOptions: {
-        themeMode: "dark",
-        themeVariables: {
-          "--wcm-z-index": "9999",
-        },
-      },
-    }),
-    // Coinbase Wallet
-    coinbaseWallet({
-      appName: "ChainMart",
-      appLogoUrl: typeof window !== "undefined" ? `${window.location.origin}/logo.png` : undefined,
-    }),
-  ],
-  transports: {
-    [polygonAmoy.id]: http(),
-    [polygon.id]: http(),
+// Create Wagmi adapter
+export const wagmiAdapter = new WagmiAdapter({
+  networks: [polygonAmoy, polygon],
+  projectId,
+  ssr: true,
+})
+
+// Create query client
+export const queryClient = new QueryClient()
+
+// Create AppKit modal
+export const modal = createAppKit({
+  adapters: [wagmiAdapter] as any, // Type assertion to handle version mismatch
+  networks: [polygonAmoy, polygon],
+  projectId,
+  metadata: {
+    name: "ChainMart",
+    description: "Decentralized Web3 Marketplace on Polygon",
+    url: typeof window !== "undefined" ? window.location.origin : "https://chainmart.com",
+    icons: [typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "https://chainmart.com/logo.png"],
+  },
+  features: {
+    analytics: true,
+  },
+  themeMode: "dark",
+  themeVariables: {
+    "--w3m-z-index": 9999,
   },
 })
+
+// Export wagmi config for compatibility
+export const wagmiConfig = wagmiAdapter.wagmiConfig
