@@ -4,7 +4,16 @@ import { polygon, polygonAmoy } from "@reown/appkit/networks"
 import { QueryClient } from "@tanstack/react-query"
 
 // WalletConnect Project ID - Get from https://cloud.reown.com/
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID"
+// Fail fast if not configured to prevent silent failures in production
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+
+if (!projectId || projectId.trim() === "") {
+  throw new Error(
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set. " +
+    "Please set this environment variable in your .env.local file. " +
+    "Get your Project ID from https://cloud.reown.com/"
+  )
+}
 
 // Define chains
 export const networks = [polygonAmoy, polygon] as const
