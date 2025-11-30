@@ -34,11 +34,22 @@ export default function ConnectWalletPage() {
       setIsLoading(true)
       setError(null)
 
+      // Validate API URL is configured
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) {
+        setError("API URL is not configured. Please check your environment variables.")
+        return
+      }
+
       // Ensure web3Service is initialized
       await web3Service.initFromWalletClient(walletClient, connector?.id)
 
+      // Build API URL robustly (remove trailing slash from base, ensure path starts with /)
+      const baseUrl = apiUrl.replace(/\/$/, '')
+      const nonceUrl = `${baseUrl}/auth/request-nonce/`
+
       // Step 1: Request nonce from backend
-      const nonceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/request-nonce/`, {
+      const nonceResponse = await fetch(nonceUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -47,18 +58,40 @@ export default function ConnectWalletPage() {
       })
 
       if (!nonceResponse.ok) {
-        const errBody = await nonceResponse.json()
-        setError(errBody.error || "Failed to request nonce")
+        let errorMessage = "Failed to request nonce"
+        try {
+          const contentType = nonceResponse.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errBody = await nonceResponse.json()
+            errorMessage = errBody.error || errorMessage
+          } else {
+            const textBody = await nonceResponse.text()
+            errorMessage = textBody || errorMessage
+          }
+        } catch {
+          // If parsing fails, use default error message
+        }
+        setError(errorMessage)
         return
       }
 
-      const { nonce, message } = await nonceResponse.json()
+      let nonce: string
+      let message: string
+      try {
+        const data = await nonceResponse.json()
+        nonce = data.nonce
+        message = data.message
+      } catch {
+        setError("Invalid response format from server")
+        return
+      }
 
       // Step 2: Sign the message with nonce
       const signature = await web3Service.signMessage(message)
 
       // Step 3: Send verification to backend
-      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-wallet/`, {
+      const verifyUrl = `${baseUrl}/auth/verify-wallet/`
+      const verifyResponse = await fetch(verifyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -70,14 +103,32 @@ export default function ConnectWalletPage() {
       })
 
       if (verifyResponse.ok) {
-        const data = await verifyResponse.json()
+        let data: any
+        try {
+          data = await verifyResponse.json()
+        } catch {
+          setError("Invalid response format from server")
+          return
+        }
         // Store token (you might want to use a proper auth context)
         localStorage.setItem('auth_token', data.token)
         // Redirect to marketplace after successful verification
         router.push("/products")
       } else {
-        const errBody = await verifyResponse.json()
-        setError(errBody.error || "Verification failed")
+        let errorMessage = "Verification failed"
+        try {
+          const contentType = verifyResponse.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errBody = await verifyResponse.json()
+            errorMessage = errBody.error || errorMessage
+          } else {
+            const textBody = await verifyResponse.text()
+            errorMessage = textBody || errorMessage
+          }
+        } catch {
+          // If parsing fails, use default error message
+        }
+        setError(errorMessage)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Verification failed"
