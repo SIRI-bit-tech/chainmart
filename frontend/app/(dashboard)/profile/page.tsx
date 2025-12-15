@@ -18,11 +18,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!isConnected || !account) return
+      if (!account) return
+      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+      if (!apiBase || !token) return
 
       try {
         setIsLoading(true)
-        const response = await fetch("/api/v1/users/me")
+        const response = await fetch(`${apiBase}/users/me/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (!response.ok) throw new Error("Failed to fetch profile")
 
         const data = await response.json()
@@ -43,9 +48,13 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch("/api/v1/users/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+      if (!apiBase || !token) throw new Error("Missing session")
+
+      const response = await fetch(`${apiBase}/users/complete_profile/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData),
       })
 

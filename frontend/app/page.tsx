@@ -106,12 +106,12 @@ export default function Home() {
           <Link href="/" className="text-2xl font-bold gradient-text-purple">
             ChainMart
           </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/browse" className="text-body hover:text-white transition-colors">
-              Marketplace
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="btn-secondary">
+              Login
             </Link>
-            <Link href="/connect-wallet" className="btn-primary">
-              Connect Wallet
+            <Link href="/register" className="btn-primary">
+              Register
             </Link>
           </div>
         </div>
@@ -133,11 +133,11 @@ export default function Home() {
                 transactions with minimal fees.
               </p>
               <div ref={buttonsRef} className="flex gap-4 justify-center flex-wrap">
-                <Link href="/browse" className="btn-primary px-10 py-4 text-lg">
-                  Browse Products
+                <Link href="/register" className="btn-primary px-10 py-4 text-lg">
+                  Create Account
                 </Link>
-                <Link href="/register" className="btn-secondary px-10 py-4 text-lg">
-                  Get Started
+                <Link href="/login" className="btn-secondary px-10 py-4 text-lg">
+                  Login
                 </Link>
               </div>
             </div>
@@ -205,17 +205,13 @@ export default function Home() {
         {/* Categories */}
         <section className="py-20 relative">
           <div className="container relative z-10">
-            <h2 className="text-4xl font-bold text-center mb-4 text-white">Browse Categories</h2>
+            <h2 className="text-4xl font-bold text-center mb-4 text-white">Shop Categories</h2>
             <p className="text-center text-body mb-16 max-w-2xl mx-auto">
               Discover a wide range of products across multiple categories, all secured by blockchain technology
             </p>
             <div className="grid md:grid-cols-4 gap-6">
               {PRODUCT_CATEGORIES.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/browse?category=${category.id}`}
-                  className="card p-6 hover:scale-105 transition-all duration-300 text-center group"
-                >
+                <Link key={category.id} href={`/products?category=${category.id}`} className="card p-6 hover:scale-105 transition-all duration-300 text-center group">
                   <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">{category.icon}</div>
                   <h3 className="font-semibold text-white">{category.label}</h3>
                 </Link>
@@ -236,28 +232,22 @@ export default function Home() {
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
                   1
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">Connect Wallet</h3>
-                <p className="text-body">
-                  Connect your Web3 wallet (MetaMask, WalletConnect, etc.) to get started
-                </p>
+                <h3 className="text-xl font-semibold mb-3 text-white">Sign Up</h3>
+                <p className="text-body">Create your account with email or social login.</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
                   2
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">Browse & Purchase</h3>
-                <p className="text-body">
-                  Find products you love and make secure purchases with cryptocurrency
-                </p>
+                <h3 className="text-xl font-semibold mb-3 text-white">Connect Wallet</h3>
+                <p className="text-body">Link your wallet after signup to enable Web3 checkout.</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
                   3
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">Smart Contract Escrow</h3>
-                <p className="text-body">
-                  Funds held safely in escrow until delivery is confirmed by both parties
-                </p>
+                <h3 className="text-xl font-semibold mb-3 text-white">Verify & Shop</h3>
+                <p className="text-body">Complete KYC, finish your profile, and start shopping securely.</p>
               </div>
             </div>
           </div>
@@ -278,15 +268,12 @@ export default function Home() {
         <section className="py-24 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-pink-600/20"></div>
           <div className="container text-center relative z-10">
-            <h2 className="text-5xl font-bold mb-6 gradient-text">Ready to trade on Web3?</h2>
+            <h2 className="text-5xl font-bold mb-6 gradient-text">Ready to get started?</h2>
             <p className="text-xl text-body mb-10 max-w-2xl mx-auto">
-              Join thousands of buyers and sellers on the most secure decentralized marketplace
+              Create your account, connect your wallet during onboarding, and shop securely.
             </p>
-            <Link
-              href="/connect-wallet"
-              className="btn-primary px-12 py-5 text-xl font-semibold inline-block glow-purple"
-            >
-              Start Trading Now
+            <Link href="/register" className="btn-primary px-12 py-5 text-xl font-semibold inline-block glow-purple">
+              Create Account
             </Link>
           </div>
         </section>

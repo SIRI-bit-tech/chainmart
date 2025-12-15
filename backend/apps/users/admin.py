@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import UserProfile, WalletSignature, UserNotificationPreference
+from .models import KYCVerification, UserNotificationPreference, UserProfile, WalletSignature
 
 
 @admin.register(UserProfile)
@@ -45,3 +45,11 @@ class UserNotificationPreferenceAdmin(admin.ModelAdmin):
     list_display = ['user', 'email_orders', 'email_messages', 'push_orders', 'digest_frequency']
     list_filter = ['digest_frequency', 'email_orders', 'push_orders']
     search_fields = ['user__username', 'user__email']
+
+
+@admin.register(KYCVerification)
+class KYCVerificationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'status', 'provider', 'verified_at']
+    list_filter = ['status', 'provider']
+    search_fields = ['user__email', 'user__username']
+    readonly_fields = ['created', 'modified', 'verified_at']

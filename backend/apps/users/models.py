@@ -26,6 +26,7 @@ class UserProfile(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='buyer')
     email_verified = models.BooleanField(default=False)
     wallet_verified = models.BooleanField(default=False)
+    profile_completed = models.BooleanField(default=False)
     reputation_score = models.IntegerField(default=0)
     total_transactions = models.IntegerField(default=0)
     is_suspended = models.BooleanField(default=False)
@@ -68,6 +69,12 @@ class UserProfile(AbstractUser):
     def is_buyer(self):
         return self.role in ('buyer', 'seller')
 
+    @property
+    def kyc_status(self):
+        if hasattr(self, 'kyc_record'):
+            return self.kyc_record.status
+        return 'unsubmitted'
+
 
 class WalletSignature(TimeStampedModel):
     """Stores wallet verification signatures"""
@@ -100,3 +107,28 @@ class UserNotificationPreference(TimeStampedModel):
     
     class Meta:
         db_table = 'users_notificationpreference'
+
+
+class KYCVerification(TimeStampedModel):
+    """Basic KYC record tied to a user account"""
+
+    STATUS_CHOICES = (
+        ('unsubmitted', 'Unsubmitted'),
+        ('pending', 'Pending'),
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected'),
+    )
+
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='kyc_record')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unsubmitted')
+    provider = models.CharField(max_length=50, blank=True, null=True)
+    full_name = models.CharField(max_length=255, blank=True)
+    country = models.CharField(max_length=2, blank=True)
+    document_type = models.CharField(max_length=50, blank=True)
+    document_number = models.CharField(max_length=64, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'users_kycverification'

@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Web3Provider } from "@/components/web3-provider"
+import { AppProviders } from "@/components/app-providers"
 import "./globals.css"
 
 const geistSans = Geist({ subsets: ["latin"] })
@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.className} ${geistMono.className} bg-background text-foreground`}>
-        <Web3Provider>{children}</Web3Provider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )

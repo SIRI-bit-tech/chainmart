@@ -1,25 +1,30 @@
 import logging
 import secrets
-from datetime import timedelta
-from django.utils import timezone
 from django.core.cache import cache
-from django.db import IntegrityError
-from rest_framework import viewsets, status
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.shortcuts import get_object_or_404
 from eth_account.messages import encode_defunct
 from web3 import Web3
-from .models import UserProfile, UserNotificationPreference
-from .serializers import UserProfileSerializer, UserProfileUpdateSerializer, UserNotificationPreferenceSerializer
+
+from .models import KYCVerification, UserNotificationPreference, UserProfile
+from .serializers import (
+    KYCVerificationSerializer,
+    UserNotificationPreferenceSerializer,
+    UserProfileSerializer,
+    UserProfileUpdateSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
 # Constants
 NONCE_EXPIRY_SECONDS = 300  # 5 minutes
 NONCE_CACHE_PREFIX = 'wallet_nonce:'
+ALLOWED_SOCIAL_PROVIDERS = {'google', 'microsoft', 'apple', 'azure-ad'}
 
 
 def verify_wallet_signature(message: str, signature: str, wallet_address: str) -> bool:
@@ -98,6 +103,16 @@ class UserViewSet(viewsets.ModelViewSet):
         """Get current user profile"""
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def complete_profile(self, request):
+        """Finalize profile details and mark onboarding completed"""
+        serializer = UserProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        request.user.profile_completed = True
+        request.user.save(update_fields=['profile_completed'])
+        return Response(UserProfileSerializer(request.user).data)
     
     @action(detail=False, methods=['post'])
     def verify_wallet(self, request):
@@ -150,6 +165,31 @@ class UserViewSet(viewsets.ModelViewSet):
                 {'error': 'Wallet address already in use'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=False, methods=['get', 'post'])
+    def kyc(self, request):
+        """Submit or fetch KYC state for the authenticated user"""
+        record, _ = KYCVerification.objects.get_or_create(user=request.user)
+
+        if request.method.lower() == 'get':
+            return Response(KYCVerificationSerializer(record).data)
+
+        serializer = KYCVerificationSerializer(record, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        # Save details and mark as verified for this phase (provider hook can adjust)
+        serializer.save()
+        record.status = 'verified'
+        record.verified_at = timezone.now()
+        record.rejection_reason = ''
+        record.save(update_fields=['status', 'verified_at', 'rejection_reason'])
+
+        # Mark user profile complete if wallet and kyc are done
+        if request.user.wallet_verified and not request.user.profile_completed:
+            request.user.profile_completed = True
+            request.user.save(update_fields=['profile_completed'])
+
+        return Response(KYCVerificationSerializer(record).data)
     
     @action(detail=False, methods=['get', 'put'])
     def notifications(self, request):
@@ -293,3 +333,114 @@ def verify_wallet_public(request):
             {'error': 'Authentication failed'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+def _issue_tokens_for_user(user: UserProfile) -> Response:
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        'token': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': UserProfileSerializer(user).data,
+    })
+
+
+def _build_username_from_email(email: str) -> str:
+    base = email.split('@')[0]
+    candidate = base
+    while UserProfile.objects.filter(username=candidate).exists():
+        suffix = secrets.token_hex(2)
+        candidate = f"{base}_{suffix}"
+    return candidate
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    """Email/password registration"""
+    email = request.data.get('email')
+    username = request.data.get('username')
+    password = request.data.get('password')
+    display_name = request.data.get('display_name') or username
+
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if UserProfile.objects.filter(email=email).exists():
+        return Response({'error': 'Email already registered'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not username:
+        username = _build_username_from_email(email)
+    if not display_name:
+        display_name = username
+
+    with transaction.atomic():
+        user = UserProfile.objects.create_user(
+            username=username,
+            email=email,
+            display_name=display_name,
+        )
+        user.set_password(password)
+        user.save()
+
+    return _issue_tokens_for_user(user)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_user(request):
+    """Email/password login"""
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = UserProfile.objects.filter(email=email).first()
+    if not user or not user.check_password(password):
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return _issue_tokens_for_user(user)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def social_login(request):
+    """Login or register via trusted OAuth providers (Google, Microsoft, Apple)."""
+    provider = request.data.get('provider')
+    email = request.data.get('email')
+    display_name = request.data.get('display_name') or request.data.get('name')
+    avatar = request.data.get('avatar')
+    provider_user_id = request.data.get('provider_user_id')
+
+    if provider not in ALLOWED_SOCIAL_PROVIDERS:
+        return Response({'error': 'Unsupported provider'}, status=status.HTTP_400_BAD_REQUEST)
+    if not email:
+        return Response({'error': 'Email is required from provider'}, status=status.HTTP_400_BAD_REQUEST)
+
+    username = _build_username_from_email(email)
+    defaults = {
+        'username': username,
+        'display_name': display_name or username,
+        'avatar': avatar,
+        'email_verified': True,
+    }
+
+    user, created = UserProfile.objects.get_or_create(email=email, defaults=defaults)
+
+    # Keep provider metadata fresh
+    updates = {}
+    if display_name and user.display_name != display_name:
+        updates['display_name'] = display_name
+    if avatar and user.avatar != avatar:
+        updates['avatar'] = avatar
+    if not user.email_verified:
+        updates['email_verified'] = True
+
+    if updates:
+        for key, value in updates.items():
+            setattr(user, key, value)
+        user.save(update_fields=list(updates.keys()))
+
+    logger.info(f"Social login success via {provider} for {email} (created={created}, provider_user_id={provider_user_id})")
+
+    return _issue_tokens_for_user(user)
