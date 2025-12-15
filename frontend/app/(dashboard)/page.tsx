@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useWeb3 } from "@/hooks/useWeb3"
+import { useApiRequest } from "@/hooks/useApiClient"
 import { formatCurrency } from "@/lib/utils"
+import { normalizeUserProfile } from "@/lib/user-utils"
 import type { UserProfile, DashboardMetrics } from "@/types/global"
 
 export default function DashboardPage() {
   const { account, isConnected } = useWeb3()
+  const apiClient = useApiRequest()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -16,22 +19,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isConnected || !account) return
+      if (!isConnected || !account) {
+        setIsLoading(false)
+        return
+      }
+
+      if (!apiClient.isReady) {
+        setIsLoading(false)
+        setError("Missing API configuration or session")
+        return
+      }
 
       try {
         setIsLoading(true)
-        const [profileRes, metricsRes] = await Promise.all([
-          fetch("/api/v1/users/me"),
-          fetch(`/api/v1/dashboard/${activeTab}/stats`),
+        const [profileData, metricsData] = await Promise.all([
+          apiClient.get("/users/me/"),
+          apiClient.get(`/dashboard/${activeTab}/stats/`),
         ])
 
-        if (!profileRes.ok || !metricsRes.ok) throw new Error("Failed to fetch data")
-
-        const profileData = await profileRes.json()
-        const metricsData = await metricsRes.json()
-
-        setProfile(profileData)
+        setProfile(normalizeUserProfile(profileData))
         setMetrics(metricsData)
+        setError(null) // Clear any previous errors
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard")
       } finally {
@@ -40,7 +48,7 @@ export default function DashboardPage() {
     }
 
     fetchData()
-  }, [isConnected, account, activeTab])
+  }, [isConnected, account, activeTab, apiClient.isReady])
 
   if (!isConnected) {
     return (

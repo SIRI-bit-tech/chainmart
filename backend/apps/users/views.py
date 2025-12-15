@@ -90,7 +90,7 @@ def validate_and_consume_nonce(wallet_address: str, nonce: str) -> bool:
 
 class UserViewSet(viewsets.ModelViewSet):
     """User profile management"""
-    queryset = UserProfile.objects.all()
+    queryset = UserProfile.objects.select_related('kyc_record').all()
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
@@ -168,7 +168,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'post'])
     def kyc(self, request):
-        """Submit or fetch KYC state for the authenticated user"""
+        """Submit or fetch KYC state for the authenticated user
+        
+        POST submissions are set to 'pending' status and require external
+        provider/webhook/admin confirmation to move to 'verified' status.
+        """
         record, _ = KYCVerification.objects.get_or_create(user=request.user)
 
         if request.method.lower() == 'get':
@@ -177,15 +181,14 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = KYCVerificationSerializer(record, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        # Save details and mark as verified for this phase (provider hook can adjust)
+        # Save details and mark as pending for external/provider/admin confirmation
         serializer.save()
-        record.status = 'verified'
-        record.verified_at = timezone.now()
-        record.rejection_reason = ''
-        record.save(update_fields=['status', 'verified_at', 'rejection_reason'])
+        record.status = 'pending'
+        record.rejection_reason = ''  # Clear any previous rejection reason
+        record.save(update_fields=['status', 'rejection_reason'])
 
-        # Mark user profile complete if wallet and kyc are done
-        if request.user.wallet_verified and not request.user.profile_completed:
+        # Mark user profile complete only if KYC is already verified
+        if record.status == 'verified' and request.user.wallet_verified and not request.user.profile_completed:
             request.user.profile_completed = True
             request.user.save(update_fields=['profile_completed'])
 
@@ -405,42 +408,106 @@ def login_user(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def social_login(request):
-    """Login or register via trusted OAuth providers (Google, Microsoft, Apple)."""
+    """
+    Secure OAuth login with cryptographic token verification.
+    
+    Supports Google, Microsoft, and Apple OAuth providers with proper ID token
+    verification to prevent authentication bypass and impersonation attacks.
+    
+    Required fields:
+    - provider: 'google', 'microsoft', or 'apple'
+    - id_token: JWT ID token from the OAuth provider
+    
+    Optional fields:
+    - access_token: For additional verification via userinfo endpoint
+    - display_name: User's display name
+    - avatar: User's avatar URL
+    """
+    from .oauth_verifier import verify_id_token, verify_access_token, get_oauth_client_id, OAuthVerificationError
+    
     provider = request.data.get('provider')
-    email = request.data.get('email')
+    id_token = request.data.get('id_token')
+    access_token = request.data.get('access_token')
     display_name = request.data.get('display_name') or request.data.get('name')
     avatar = request.data.get('avatar')
-    provider_user_id = request.data.get('provider_user_id')
-
+    
+    # Validate required fields
+    if not provider:
+        return Response({'error': 'Provider is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
     if provider not in ALLOWED_SOCIAL_PROVIDERS:
         return Response({'error': 'Unsupported provider'}, status=status.HTTP_400_BAD_REQUEST)
-    if not email:
-        return Response({'error': 'Email is required from provider'}, status=status.HTTP_400_BAD_REQUEST)
-
-    username = _build_username_from_email(email)
-    defaults = {
-        'username': username,
-        'display_name': display_name or username,
-        'avatar': avatar,
-        'email_verified': True,
-    }
-
-    user, created = UserProfile.objects.get_or_create(email=email, defaults=defaults)
-
-    # Keep provider metadata fresh
-    updates = {}
-    if display_name and user.display_name != display_name:
-        updates['display_name'] = display_name
-    if avatar and user.avatar != avatar:
-        updates['avatar'] = avatar
-    if not user.email_verified:
-        updates['email_verified'] = True
-
-    if updates:
-        for key, value in updates.items():
-            setattr(user, key, value)
-        user.save(update_fields=list(updates.keys()))
-
-    logger.info(f"Social login success via {provider} for {email} (created={created}, provider_user_id={provider_user_id})")
-
-    return _issue_tokens_for_user(user)
+    
+    if not id_token:
+        return Response({'error': 'ID token is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Get OAuth client ID for this provider
+        client_id = get_oauth_client_id(provider)
+        
+        # Verify ID token cryptographically
+        token_claims = verify_id_token(provider, id_token, client_id)
+        
+        # Extract verified user information
+        email = token_claims['email']
+        verified_display_name = token_claims.get('name') or display_name
+        verified_avatar = token_claims.get('picture') or avatar
+        
+        # Optional: Additional verification via access token
+        if access_token:
+            try:
+                userinfo = verify_access_token(provider, access_token)
+                # Cross-verify email matches
+                if userinfo.get('email') != email:
+                    logger.warning(f"Email mismatch between ID token and userinfo for {provider}")
+                    return Response({'error': 'Token verification failed'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Use userinfo data if available
+                verified_display_name = userinfo.get('name') or verified_display_name
+                verified_avatar = userinfo.get('picture') or verified_avatar
+                
+            except OAuthVerificationError as e:
+                logger.warning(f"Access token verification failed for {provider}: {str(e)}")
+                # Continue with ID token verification only
+        
+        # Create or get user with verified email
+        username = _build_username_from_email(email)
+        defaults = {
+            'username': username,
+            'display_name': verified_display_name or username,
+            'avatar': verified_avatar,
+            'email_verified': True,  # OAuth providers verify emails
+        }
+        
+        user, created = UserProfile.objects.get_or_create(email=email, defaults=defaults)
+        
+        # Update user metadata if changed
+        updates = {}
+        if verified_display_name and user.display_name != verified_display_name:
+            updates['display_name'] = verified_display_name
+        if verified_avatar and user.avatar != verified_avatar:
+            updates['avatar'] = verified_avatar
+        if not user.email_verified:
+            updates['email_verified'] = True
+        
+        if updates:
+            for key, value in updates.items():
+                setattr(user, key, value)
+            user.save(update_fields=list(updates.keys()))
+        
+        logger.info(f"Secure OAuth login success via {provider} for {email} (created={created})")
+        
+        return _issue_tokens_for_user(user)
+        
+    except OAuthVerificationError as e:
+        logger.warning(f"OAuth verification failed for {provider}: {str(e)}")
+        return Response(
+            {'error': 'Authentication failed', 'details': 'Invalid or expired token'}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error during OAuth login for {provider}: {str(e)}", exc_info=True)
+        return Response(
+            {'error': 'Authentication failed'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

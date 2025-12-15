@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { SocialButtons } from "@/components/auth/social-buttons"
 
@@ -25,25 +26,20 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    try {
-      setIsLoading(true)
-      setError(null)
+    setIsLoading(true)
+    setError(null)
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data?.token) {
-          localStorage.setItem("auth_token", data.token)
-        }
+      if (result?.ok) {
         router.push("/onboarding")
       } else {
-        const data = await response.json()
-        setError(data.error || "Login failed")
+        setError(result?.error || "Login failed")
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")

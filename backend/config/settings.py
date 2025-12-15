@@ -15,7 +15,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-chainmart-dev-key-cha
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
 
 # Application definition
@@ -268,6 +268,11 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@chainmart.com
 # IPFS Configuration
 IPFS_API_URL = os.environ.get('IPFS_API_URL', 'http://localhost:5001')
 IPFS_GATEWAY_URL = os.environ.get('IPFS_GATEWAY_URL', 'https://gateway.pinata.cloud/ipfs/')
+
+# OAuth Configuration
+OAUTH_GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+OAUTH_MICROSOFT_CLIENT_ID = os.environ.get('MICROSOFT_CLIENT_ID')
+OAUTH_APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID')
 
 # Security Settings
 SECURE_SSL_REDIRECT = not DEBUG

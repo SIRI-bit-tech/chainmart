@@ -28,6 +28,12 @@ requests
 python-dotenv
 pytz==2023.3.post1
 
+# OAuth token verification
+PyJWT[crypto]
+cryptography
+google-auth
+microsoft-kiota-authentication-azure
+
 python-socketio
 python-engineio
 aiohttp

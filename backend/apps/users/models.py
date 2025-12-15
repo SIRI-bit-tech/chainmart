@@ -71,7 +71,8 @@ class UserProfile(AbstractUser):
 
     @property
     def kyc_status(self):
-        if hasattr(self, 'kyc_record'):
+        # Use instance cache to avoid N+1 queries
+        if 'kyc_record' in self.__dict__:
             return self.kyc_record.status
         return 'unsubmitted'
 
@@ -120,7 +121,7 @@ class KYCVerification(TimeStampedModel):
     )
 
     user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='kyc_record')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unsubmitted')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unsubmitted', db_index=True)
     provider = models.CharField(max_length=50, blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True)
     country = models.CharField(max_length=2, blank=True)
@@ -132,3 +133,6 @@ class KYCVerification(TimeStampedModel):
 
     class Meta:
         db_table = 'users_kycverification'
+    
+    def __str__(self):
+        return f"KYC: {self.user.display_name or self.user.username} - {self.get_status_display()}"
