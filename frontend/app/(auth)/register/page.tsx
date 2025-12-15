@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { SocialButtons } from "@/components/auth/social-buttons"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -37,7 +38,11 @@ export default function RegisterPage() {
       })
 
       if (response.ok) {
-        router.push("/dashboard")
+        const data = await response.json()
+        if (data?.token) {
+          localStorage.setItem("auth_token", data.token)
+        }
+        router.push("/onboarding")
       } else {
         const data = await response.json()
         setError(data.error || "Registration failed")
@@ -54,6 +59,14 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="card p-8">
           <h1 className="text-3xl font-bold text-center mb-8">Create Account</h1>
+
+          <SocialButtons redirectTo="/onboarding" />
+
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">or continue with email</span>
+            <div className="h-px bg-border flex-1" />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -127,12 +140,7 @@ export default function RegisterPage() {
                 Sign in
               </Link>
             </p>
-            <p className="text-muted-foreground">
-              Or{" "}
-              <Link href="/connect-wallet" className="text-accent hover:underline">
-                connect wallet instead
-              </Link>
-            </p>
+            <p className="text-muted-foreground text-sm">You’ll connect your wallet after creating your account.</p>
           </div>
         </div>
       </div>

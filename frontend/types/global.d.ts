@@ -66,10 +66,16 @@ export interface UserProfile {
   bio?: string
   role: UserRole
   verified: boolean
+  emailVerified?: boolean
+  walletVerified?: boolean
+  profileCompleted?: boolean
+  kycStatus?: KycStatus
   reputation?: ReputationData
   createdAt: Date
   updatedAt: Date
 }
+
+export type KycStatus = "unsubmitted" | "pending" | "verified" | "rejected"
 
 export type UserRole = "buyer" | "seller" | "admin"
 
