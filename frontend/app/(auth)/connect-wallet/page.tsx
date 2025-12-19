@@ -110,9 +110,8 @@ export default function ConnectWalletPage() {
           setError("Invalid response format from server")
           return
         }
-        // Store token (you might want to use a proper auth context)
-        localStorage.setItem('auth_token', data.token)
         // Redirect to marketplace after successful verification
+        // Note: Token is handled by the backend API route
         router.push("/products")
       } else {
         let errorMessage = "Verification failed"

@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from "react"
 import { useWeb3 } from "@/hooks/useWeb3"
+import { useApiRequest } from "@/hooks/useApiClient"
 import { formatAddress } from "@/lib/utils"
+import { normalizeUserProfile } from "@/lib/user-utils"
 import type { UserProfile } from "@/types/global"
 
 export default function ProfilePage() {
   const { account, isConnected, balance } = useWeb3()
+  const apiClient = useApiRequest()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
@@ -18,24 +22,28 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!account) return
-      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-      if (!apiBase || !token) return
+      // Check preconditions before setting loading state
+      if (!account) {
+        setIsLoading(false)
+        return
+      }
+      
+      if (!apiClient.isReady) {
+        setIsLoading(false)
+        setError("Missing API configuration or session")
+        return
+      }
 
       try {
         setIsLoading(true)
-        const response = await fetch(`${apiBase}/users/me/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!response.ok) throw new Error("Failed to fetch profile")
-
-        const data = await response.json()
-        setProfile(data)
+        const data = await apiClient.get("/users/me/")
+        const normalizedProfile = normalizeUserProfile(data)
+        setProfile(normalizedProfile)
         setFormData({
-          displayName: data.display_name || "",
-          bio: data.bio || "",
+          displayName: normalizedProfile.displayName || "",
+          bio: normalizedProfile.bio || "",
         })
+        setError(null) // Clear any previous errors
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile")
       } finally {
@@ -44,27 +52,25 @@ export default function ProfilePage() {
     }
 
     fetchProfile()
-  }, [isConnected, account])
+  }, [isConnected, account, apiClient.isReady])
 
   const handleSave = async () => {
+    if (!apiClient.isReady) {
+      setError("Missing API configuration or session")
+      return
+    }
+
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-      if (!apiBase || !token) throw new Error("Missing session")
-
-      const response = await fetch(`${apiBase}/users/complete_profile/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        const updated = await response.json()
-        setProfile(updated)
-        setIsEditing(false)
-      }
+      setIsSaving(true)
+      setError(null) // Clear any previous errors
+      
+      const updated = await apiClient.post("/users/complete_profile/", formData)
+      setProfile(normalizeUserProfile(updated))
+      setIsEditing(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save profile")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -159,11 +165,17 @@ export default function ProfilePage() {
               />
             </div>
 
+            {error && (
+              <div className="bg-error/10 border border-error rounded-lg p-4">
+                <p className="text-sm text-error">{error}</p>
+              </div>
+            )}
+
             <div className="flex gap-4">
-              <button onClick={handleSave} className="btn-primary py-2 px-6">
-                Save Changes
+              <button onClick={handleSave} disabled={isSaving} className="btn-primary py-2 px-6">
+                {isSaving ? "Saving..." : "Save Changes"}
               </button>
-              <button onClick={() => setIsEditing(false)} className="btn-secondary py-2 px-6">
+              <button onClick={() => setIsEditing(false)} disabled={isSaving} className="btn-secondary py-2 px-6">
                 Cancel
               </button>
             </div>

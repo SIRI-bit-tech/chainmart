@@ -4,7 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     const { email, username, password, displayName } = await request.json()
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/register/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -22,15 +22,8 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
 
-    const res = NextResponse.json(data)
-    res.cookies.set("auth_token", data.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-    })
-
-    return res
+    // Return success without setting cookies - NextAuth will handle authentication
+    return NextResponse.json({ success: true, message: "Registration successful" })
   } catch (error) {
     return NextResponse.json({ error: "Registration failed" }, { status: 400 })
   }

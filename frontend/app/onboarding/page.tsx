@@ -1,39 +1,22 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { CheckCircle2, Loader2, ShieldCheck, WalletMinimal } from "lucide-react"
 import { useWeb3 } from "@/hooks/useWeb3"
+import { useApiRequest } from "@/hooks/useApiClient"
 import { web3Service } from "@/lib/web3"
-import type { KycStatus, UserProfile } from "@/types/global"
+import { normalizeUserProfile } from "@/lib/user-utils"
+import type { UserProfile } from "@/types/global"
 
 type StepKey = "wallet" | "kyc" | "profile"
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")
+// Removed: API base URL now handled by useApiRequest hook
 const steps: StepKey[] = ["wallet", "kyc", "profile"]
 
-function normalizeUser(payload: any): UserProfile {
-  return {
-    id: String(payload.id),
-    username: payload.username,
-    email: payload.email,
-    walletAddress: payload.wallet_address || "",
-    displayName: payload.display_name || payload.username,
-    avatar: payload.avatar,
-    bio: payload.bio,
-    role: payload.role,
-    verified: Boolean(payload.wallet_verified),
-    emailVerified: payload.email_verified,
-    walletVerified: payload.wallet_verified,
-    profileCompleted: payload.profile_completed,
-    kycStatus: (payload.kyc_status as KycStatus) || "unsubmitted",
-    reputation: payload.reputation,
-    createdAt: payload.created_at,
-    updatedAt: payload.updated_at,
-  }
-}
+
 
 const stepMeta: Record<StepKey, { title: string; description: string; icon: React.ReactNode }> = {
   wallet: { title: "Connect wallet", description: "Sign a message to link your wallet", icon: <WalletMinimal className="w-5 h-5" /> },
@@ -45,6 +28,7 @@ export default function OnboardingPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const { account, isConnected, connect } = useWeb3()
+  const apiClient = useApiRequest()
 
   const [user, setUser] = useState<UserProfile | null>(null)
   const [kycForm, setKycForm] = useState({ full_name: "", country: "", document_type: "passport", document_number: "" })
@@ -52,25 +36,11 @@ export default function OnboardingPage() {
   const [isBusy, setIsBusy] = useState<StepKey | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const token = useMemo(() => {
-    if (typeof window === "undefined") return null
-    const localToken = localStorage.getItem("auth_token")
-    if (!localToken && session?.backendToken) {
-      localStorage.setItem("auth_token", session.backendToken)
-      return session.backendToken
-    }
-    return localToken || session?.backendToken || null
-  }, [session?.backendToken])
-
   const fetchProfile = async () => {
-    if (!token || !apiBase) return
+    if (!apiClient.isReady) return
     try {
-      const response = await fetch(`${apiBase}/users/me/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!response.ok) throw new Error("Failed to load profile")
-      const payload = await response.json()
-      const normalized = normalizeUser(payload)
+      const payload = await apiClient.get("/users/me/")
+      const normalized = normalizeUserProfile(payload)
       setUser(normalized)
       setProfileForm({
         display_name: normalized.displayName || "",
@@ -82,17 +52,15 @@ export default function OnboardingPage() {
   }
 
   useEffect(() => {
-    if (!token) return
+    if (!apiClient.isReady) return
     void fetchProfile()
-  }, [token])
+  }, [apiClient.isReady])
 
   useEffect(() => {
-    if (token) return
-    const stored = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-    if (!session && !stored) {
+    if (!session && !apiClient.isReady) {
       router.replace("/login")
     }
-  }, [router, session, token])
+  }, [router, session, apiClient.isReady])
 
   useEffect(() => {
     if (user?.profileCompleted) {
@@ -107,7 +75,7 @@ export default function OnboardingPage() {
   }
 
   const handleWalletVerify = async () => {
-    if (!token || !account || !apiBase) {
+    if (!apiClient.isReady || !account) {
       setError("Missing wallet or session. Please try again.")
       return
     }
@@ -116,27 +84,60 @@ export default function OnboardingPage() {
       setIsBusy("wallet")
       setError(null)
 
-      const nonceResponse = await fetch(`${apiBase}/auth/request-nonce/`, {
+      // Request nonce (this endpoint doesn't require auth)
+      const nonceResponse = await fetch(`${apiClient.apiBase}/users/request-nonce/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet_address: account }),
       })
-      const { nonce, message } = await nonceResponse.json()
+
+      if (!nonceResponse.ok) {
+        let errorMessage = `Nonce request failed: ${nonceResponse.status} ${nonceResponse.statusText}`
+        try {
+          const errorData = await nonceResponse.json()
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch {
+          // If JSON parsing fails, try to get text response
+          try {
+            const errorText = await nonceResponse.text()
+            if (errorText) errorMessage = errorText
+          } catch {
+            // Keep the default error message if both JSON and text parsing fail
+          }
+        }
+        console.error("Nonce request failed:", {
+          status: nonceResponse.status,
+          statusText: nonceResponse.statusText,
+          url: `${apiClient.apiBase}/users/request-nonce/`
+        })
+        throw new Error(errorMessage)
+      }
+
+      let nonceData: { nonce: string; message: string }
+      try {
+        nonceData = await nonceResponse.json()
+      } catch (parseError) {
+        console.error("Failed to parse nonce response JSON:", parseError)
+        throw new Error("Invalid response format from nonce endpoint")
+      }
+
+      const { nonce, message } = nonceData
+      if (!nonce || !message) {
+        console.error("Nonce response missing required fields:", { nonce: Boolean(nonce), message: Boolean(message) })
+        throw new Error("Nonce response missing required fields")
+      }
 
       const signature = await web3Service.signMessage(message)
 
-      const verifyResponse = await fetch(`${apiBase}/users/verify_wallet/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ wallet_address: account, message, signature, nonce }),
+      // Verify wallet with auth
+      const updated = await apiClient.post("/users/verify-wallet/", {
+        wallet_address: account,
+        message,
+        signature,
+        nonce,
       })
-
-      if (!verifyResponse.ok) throw new Error("Wallet verification failed")
-      const updated = await verifyResponse.json()
-      setUser(normalizeUser(updated))
+      
+      setUser(normalizeUserProfile(updated))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Wallet verification failed")
     } finally {
@@ -145,23 +146,14 @@ export default function OnboardingPage() {
   }
 
   const handleKycSubmit = async () => {
-    if (!token || !apiBase) {
+    if (!apiClient.isReady) {
       setError("Please sign in again.")
       return
     }
     try {
       setIsBusy("kyc")
       setError(null)
-      const response = await fetch(`${apiBase}/users/kyc/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(kycForm),
-      })
-      if (!response.ok) throw new Error("KYC submission failed")
-      const payload = await response.json()
+      const payload = await apiClient.post("/users/kyc/", kycForm)
       setUser((prev) => (prev ? { ...prev, kycStatus: payload.status } : prev))
       await fetchProfile()
     } catch (err) {
@@ -172,21 +164,16 @@ export default function OnboardingPage() {
   }
 
   const handleProfileComplete = async () => {
-    if (!token || !apiBase) return
+    if (!apiClient.isReady) {
+      setError("Missing session or API configuration")
+      return
+    }
+    
     try {
       setIsBusy("profile")
       setError(null)
-      const response = await fetch(`${apiBase}/users/complete_profile/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(profileForm),
-      })
-      if (!response.ok) throw new Error("Profile update failed")
-      const updated = await response.json()
-      setUser(normalizeUser(updated))
+      const updated = await apiClient.post("/users/complete_profile/", profileForm)
+      setUser(normalizeUserProfile(updated))
       router.replace("/products")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Profile update failed")

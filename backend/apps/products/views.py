@@ -7,7 +7,7 @@ from .models import Product, ProductImage
 from .serializers import ProductListSerializer, ProductDetailSerializer, ProductCreateUpdateSerializer
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.filter(is_active=True)
+    queryset = Product.objects.select_related('seller__kyc_record').filter(is_active=True)
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'seller']
@@ -40,7 +40,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         if self.action == 'my_products':
-            return Product.objects.filter(seller=self.request.user)
+            return Product.objects.select_related('seller__kyc_record').filter(seller=self.request.user)
         return super().get_queryset()
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { SocialButtons } from "@/components/auth/social-buttons"
 
@@ -27,10 +28,11 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    try {
-      setIsLoading(true)
-      setError(null)
+    setIsLoading(true)
+    setError(null)
 
+    try {
+      // First, register the user
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,14 +40,22 @@ export default function RegisterPage() {
       })
 
       if (response.ok) {
-        const data = await response.json()
-        if (data?.token) {
-          localStorage.setItem("auth_token", data.token)
+        // Registration successful, now sign in with NextAuth
+        const result = await signIn("credentials", {
+          redirect: false,
+          email: formData.email,
+          password: formData.password,
+        })
+
+        if (result?.ok) {
+          router.push("/onboarding")
+        } else {
+          setError(result?.error || "Registration successful but login failed. Please try logging in.")
         }
-        router.push("/onboarding")
       } else {
         const data = await response.json()
         setError(data.error || "Registration failed")
+        return // Don't proceed to login if registration failed
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")

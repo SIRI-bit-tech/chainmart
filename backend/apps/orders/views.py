@@ -6,17 +6,18 @@ from .models import Order
 from .serializers import OrderSerializer
 
 class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
+    queryset = Order.objects.select_related('buyer__kyc_record', 'seller__kyc_record', 'product').all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
+        base_queryset = Order.objects.select_related('buyer__kyc_record', 'seller__kyc_record', 'product')
         if self.action == 'buyer_orders':
-            return Order.objects.filter(buyer=user)
+            return base_queryset.filter(buyer=user)
         elif self.action == 'seller_orders':
-            return Order.objects.filter(seller=user)
-        return Order.objects.filter(buyer=user) | Order.objects.filter(seller=user)
+            return base_queryset.filter(seller=user)
+        return base_queryset.filter(buyer=user) | base_queryset.filter(seller=user)
     
     @action(detail=False, methods=['get'])
     def buyer_orders(self, request):

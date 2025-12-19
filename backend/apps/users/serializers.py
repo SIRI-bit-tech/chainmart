@@ -14,7 +14,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'email_verified', 'wallet_verified', 'profile_completed', 'kyc_status',
             'is_seller', 'is_buyer', 'created_at'
         ]
-        read_only_fields = ['id', 'reputation_score', 'total_transactions', 'created_at']
+        read_only_fields = ['id', 'reputation_score', 'total_transactions', 'created_at', 'email_verified', 'wallet_verified', 'profile_completed']
 
     def get_kyc_status(self, obj):
         return getattr(obj, 'kyc_status', 'unsubmitted')
